@@ -109,15 +109,6 @@
     - path.stat.exists
     - path.stat.isdir
 
-- name: "Download and Unarchive Micro Focus COBOL DevHub Server package"
-  block:
-  - name: "Set Facts for Micro Focus COBOL DevHub installer package"
-    set_fact:
-      software_url: "{{ micro_focus_software_url }}"
-      package_name: "{{ micro_focus_package_name }}"
-  - name: "Download installer package"
-    include_tasks: download.yml
-
 - name: "Download & Install Java Development Kit version 11 package"
   block:
   - name: "Set Facts for Java Development Kit installer package"
@@ -132,6 +123,15 @@
       state: present
     when:
       - "'jdk-11.0.11' not in ansible_facts.packages"
+
+- name: "Download and Unarchive Micro Focus COBOL DevHub Server package"
+  block:
+  - name: "Set Facts for Micro Focus COBOL DevHub installer package"
+    set_fact:
+      software_url: "{{ micro_focus_software_url }}"
+      package_name: "{{ micro_focus_package_name }}"
+  - name: "Download installer package"
+    include_tasks: download.yml
 
 - name: "Install Micro Focus COBOL DevHub Server"
   command: ./{{ package_name }} -ESadminID={{ service_user|quote }} -IacceptEULA -noplatformcheck
