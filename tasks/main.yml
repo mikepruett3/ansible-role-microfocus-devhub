@@ -134,7 +134,7 @@
     include_tasks: download.yml
 
 - name: "Install Micro Focus COBOL DevHub Server"
-  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} -IacceptEULA -noplatformcheck
+  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} --installlocation="/opt/microfocus/VisualCOBOL-DevHub" -IacceptEULA -noplatformcheck
   args:
     chdir: "/root/software/"
     #creates: "/opt/microfocus/VisualCOBOL/bin/cob64"
