@@ -130,7 +130,7 @@
     set_fact:
       software_url: "{{ micro_focus_software_url }}"
       package_name: "{{ micro_focus_package_name }}"
-      install_dir: "/opt/microfocus/VisualCOBOL-DevHub"
+      install_dir: "/opt/microfocus/VisualCOBOL-DevHub/"
   - name: "Download installer package"
     include_tasks: download.yml
 
