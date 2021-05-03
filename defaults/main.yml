@@ -1,2 +1,10 @@
 ---
-# defaults file for ansible-role-mf-devhub/
+service_homedir: "/data/user"
+service_group: "service-group"
+service_user: "service-user"
+
+micro_focus_software_url: "http://www.example.org"
+micro_focus_package_name: "setup_devhub_server"
+
+java_software_url: "http://www.example.org"
+java_package_name: "jdk-11_linux-x64_bin.rpm"

@@ -1,2 +1,140 @@
 ---
-# tasks file for ansible-role-mf-devhub/
+- name: "Gather the package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+  when: ansible_facts.packages is not defined
+
+- name: "Host Setup/Changes"
+  block:
+  - name: "Disable SELinux"
+    selinux:
+      state: disabled
+    register: reboot
+  - name: "Add hosts entry for local host IP address"
+    lineinfile:
+      path: /etc/hosts
+      insertafter: EOF
+      line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }}  {{ inventory_hostname.split('.')[0] }}"
+  - name: "Set systems Hostname"
+    ansible.builtin.hostname:
+      name: "{{ inventory_hostname }}"
+    register: hostname
+  - name: "Retrieve /tmp mount point Source"
+    shell: findmnt --fstab --target '/tmp' | tail -n 1 | awk '{ print $2 }'
+    register: src
+  - name: "Retrieve /tmp mount point FSType"
+    shell: findmnt --fstab --target '/tmp' | tail -n 1 | awk '{ print $3 }'
+    register: fstype
+  - name: "Retrieve /tmp mount point Options"
+    shell: findmnt --fstab --target '/tmp' | tail -n 1 | awk '{ print $4 }'
+    register: opts
+  - name: "Configure default mount options on /tmp mount point"
+    mount:
+      path: /tmp
+      src: "{{ src.stdout|string }}"
+      fstype: "{{ fstype.stdout|string }}"
+      opts: defaults
+      state: mounted
+    when: opts.stdout != "defaults"
+  - name: "Reboot host"
+    reboot:
+    when: reboot.reboot_required or hostname.changed
+
+- name: "Install required packages"
+  block:
+    - name: "Install required packages, if not already installed (RHEL7)"
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - pax
+        - ksh
+      when:
+        - "item|string not in ansible_facts.packages"
+        - ansible_os_family == 'RedHat'
+        - ansible_distribution_major_version <= '7'
+    - name: "Install required packages, if not already installed (RHEL8)"
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - spax
+        - ksh
+        - glibc.i686
+        - libgcc.i686
+        - libstdc++.i686
+        - glibc-devel.i686
+      when:
+        - "item|string not in ansible_facts.packages"
+        - ansible_os_family == 'RedHat'
+        - ansible_distribution_major_version == '8'
+
+- name: "Setup Service Account"
+  block:
+    - name: "Check for service users homedir existence"
+      stat:
+        path: "{{ service_homedir }}"
+      register: path
+    - name: "Create service users group, if not already created"
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+      register: group
+    - name: "Create service user, if not already created"
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_homedir }}/{{ service_user }}"
+        generate_ssh_key: yes
+        ssh_key_type: ed25519
+        ssh_key_comment: "{{ service_user }}@{{ inventory_hostname }}"
+        state: present
+      when:
+        - group.state
+        - path.stat.exists
+        - path.stat.isdir
+
+- name: "Create required directories in the service users homedir"
+  file:
+    path: "{{ service_homedir }}/{{ service_user }}/{{ item }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    state: directory
+  with_items:
+    - "data"
+    - "data/tmp"
+    - "udata"
+    - "udata/tmp"
+  when:
+    - path.stat.exists
+    - path.stat.isdir
+
+- name: "Download and Unarchive Micro Focus COBOL DevHub Server package"
+  block:
+  - name: "Set Facts for Micro Focus COBOL DevHub installer package"
+    set_fact:
+      software_url: "{{ micro_focus_software_url }}"
+      package_name: "{{ micro_focus_package_name }}"
+  - name: "Download installer package"
+    include_tasks: download.yml
+
+- name: "Download & Install Java Development Kit version 11 package"
+  block:
+  - name: "Set Facts for Java Development Kit installer package"
+    set_fact:
+      software_url: "{{ java_software_url }}"
+      package_name: "{{ java_package_name }}"
+  - name: "Download installer package"
+    include_tasks: download.yml
+  - name: "Install Java Development Kit version 11, if not already installed"
+    package:
+      name: "/root/software/{{ package_name }}"
+      state: present
+    when:
+      - "'jdk-11.0.11' not in ansible_facts.packages"
+
+- name: "Install Micro Focus COBOL DevHub Server"
+  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} -IacceptEULA -noplatformcheck
+  args:
+    chdir: "/root/software/"
+    #creates: "/opt/microfocus/VisualCOBOL/bin/cob64"
