@@ -138,4 +138,4 @@
   shell: ./{{ package_name }} -ESadminID={{ service_user|quote }} -installlocation="{{ install_dir | quote }}" -IacceptEULA -noplatformcheck
   args:
     chdir: "/root/software/"
-    #creates: "/opt/microfocus/VisualCOBOL/bin/cob64"
+    creates: "/opt/microfocus/VisualCOBOL-DevHub/bin/cob64"
