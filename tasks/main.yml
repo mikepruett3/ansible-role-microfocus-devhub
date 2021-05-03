@@ -130,11 +130,12 @@
     set_fact:
       software_url: "{{ micro_focus_software_url }}"
       package_name: "{{ micro_focus_package_name }}"
+      install_dir: "/opt/microfocus/VisualCOBOL-DevHub"
   - name: "Download installer package"
     include_tasks: download.yml
 
 - name: "Install Micro Focus COBOL DevHub Server"
-  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} --installlocation="/opt/microfocus/VisualCOBOL-DevHub" -IacceptEULA -noplatformcheck
+  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} --installlocation={{ install_dir|quote }} -IacceptEULA -noplatformcheck
   args:
     chdir: "/root/software/"
     #creates: "/opt/microfocus/VisualCOBOL/bin/cob64"
