@@ -49,6 +49,7 @@
       with_items:
         - pax
         - ksh
+        - flex
       when:
         - "item|string not in ansible_facts.packages"
         - ansible_os_family == 'RedHat'
@@ -60,6 +61,7 @@
       with_items:
         - spax
         - ksh
+        - flex
         - glibc.i686
         - libgcc.i686
         - libstdc++.i686
