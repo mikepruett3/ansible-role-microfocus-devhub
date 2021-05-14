@@ -50,6 +50,16 @@
         - pax
         - ksh
         - flex
+        - flex-devel
+        - flex-devel.i686
+        - glibc
+        - glibc.i686
+        - libgcc
+        - libgcc.i686
+        - libstdc++
+        - libstdc++.i686
+        - glibc-devel
+        - glibc-devel.i686
       when:
         - "item|string not in ansible_facts.packages"
         - ansible_os_family == 'RedHat'
@@ -73,71 +83,71 @@
 
 - name: "Setup Service Account"
   block:
-    - name: "Check for service users homedir existence"
+    - name: "Collect stats for service users homedir"
       stat:
         path: "{{ service_homedir }}"
       register: path
-    - name: "Create service users group, if not already created"
-      ansible.builtin.group:
+    - name: "Test service users homedir existence"
+      fail:
+        msg: "Path {{ service_homedir }} does not exist on {{ inventory_hostname }}!"
+      when: not path.stat.exists or not path.stat.isdir
+    - name: "Create service users group"
+      group:
         name: "{{ service_group }}"
         state: present
-      register: group
-    - name: "Create service user, if not already created"
-      ansible.builtin.user:
+    - name: "Create service user"
+      user:
         name: "{{ service_user }}"
         group: "{{ service_group }}"
         home: "{{ service_homedir }}/{{ service_user }}"
         generate_ssh_key: yes
-        ssh_key_type: ed25519
+        ssh_key_type: "{{ ssh_key_type }}"
         ssh_key_comment: "{{ service_user }}@{{ inventory_hostname }}"
         state: present
-      when:
-        - group.state
-        - path.stat.exists
-        - path.stat.isdir
+    - name: "Create required directories in the service users homedir"
+      file:
+        path: "{{ service_homedir }}/{{ service_user }}/{{ item }}"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        state: directory
+      with_items:
+        - "data"
+        - "data/tmp"
+        - "udata"
+        - "udata/tmp"
 
-- name: "Create required directories in the service users homedir"
+- name: "Create software directory under root homedir, if it does not exist"
   file:
-    path: "{{ service_homedir }}/{{ service_user }}/{{ item }}"
-    owner: "{{ service_user }}"
-    group: "{{ service_group }}"
+    path: "/root/software/"
     state: directory
-  with_items:
-    - "data"
-    - "data/tmp"
-    - "udata"
-    - "udata/tmp"
-  when:
-    - path.stat.exists
-    - path.stat.isdir
 
-- name: "Download & Install Java Development Kit version 11 package"
-  block:
-  - name: "Set Facts for Java Development Kit installer package"
-    set_fact:
-      software_url: "{{ java_software_url }}"
-      package_name: "{{ java_package_name }}"
-  - name: "Download installer package"
-    include_tasks: download.yml
-  - name: "Install Java Development Kit version 11, if not already installed"
-    package:
-      name: "/root/software/{{ package_name }}"
-      state: present
-    when:
-      - "'jdk-11.0.11' not in ansible_facts.packages"
+- name: "Download installer package from local repository"
+  get_url:
+    url: "{{ software_url }}/{{ package_name }}"
+    dest: "/root/software/{{ package_name }}"
+    validate_certs: no
+    mode: 0777
 
-- name: "Download and Unarchive Micro Focus COBOL DevHub Server package"
-  block:
-  - name: "Set Facts for Micro Focus COBOL DevHub installer package"
-    set_fact:
-      software_url: "{{ micro_focus_software_url }}"
-      package_name: "{{ micro_focus_package_name }}"
-      install_dir: "/opt/microfocus/VisualCOBOL-DevHub/"
-  - name: "Download installer package"
-    include_tasks: download.yml
+- name: "Collect package inventory from yum"
+  package:
+    list: "jdk"
+  register: yum_list
 
-- name: "Install Micro Focus COBOL DevHub Server"
-  shell: ./{{ package_name }} -ESadminID={{ service_user|quote }} -installlocation="{{ install_dir | quote }}" -IacceptEULA -noplatformcheck
+- name: "Test if Oracle Java Development Kit (JDK) installed"
+  fail:
+    msg: "Oracle Java Development Kit (JDK) not installed!"
+  when: yum_list.results | selectattr("yumstate", "match", "installed") | list | length == 0
+
+- name: "Install Micro Focus COBOL DevHub Server (CentOS)"
+  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} -installlocation="{{ install_dir | quote }}" -IacceptEULA -noplatformcheck
   args:
     chdir: "/root/software/"
     creates: "/opt/microfocus/VisualCOBOL-DevHub/bin/cob64"
+  when: ansible_distribution == 'CentOS'
+
+- name: "Install Micro Focus COBOL DevHub Server (RHEL)"
+  command: ./{{ package_name }} -ESadminID={{ service_user|quote }} -installlocation="{{ install_dir | quote }}" -IacceptEULA
+  args:
+    chdir: "/root/software/"
+    creates: "/opt/microfocus/VisualCOBOL-DevHub/bin/cob64"
+  when: ansible_distribution == 'RedHat'

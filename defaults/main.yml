@@ -1,10 +1,8 @@
 ---
-service_homedir: "/data/user"
-service_group: "service-group"
 service_user: "service-user"
-
-micro_focus_software_url: "http://www.example.org"
-micro_focus_package_name: "setup_devhub_server"
-
-java_software_url: "http://www.example.org"
-java_package_name: "jdk-11_linux-x64_bin.rpm"
+service_group: "service-group"
+service_homedir: "/data/user"
+ssh_key_type: "ed25519"
+software_url: "http://www.example.org"
+package_name: "setup_devhub_server"
+install_dir: "/opt/microfocus/VisualCOBOL-DevHub/"

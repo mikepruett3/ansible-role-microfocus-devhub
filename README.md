@@ -1,38 +1,72 @@
-Role Name
+Ansible Role: Micro Focus Visual COBOL Development Hub Server
 =========
 
-A brief description of the role goes here.
+Ansible role to install [Micro Focus Visual COBOL Development Hub Server](http://www.goodworks.it/pub/visual-cobol-development-hub.pdfw) software on Linux Servers.
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+The role does not require anyting to run on RHEL and its derivatives. This role assumes that you have the software package located on a web server somewhere in your environment.
+
+By default, Visual COBOL Server installs in the same location as the DevHub Server. This playbook adjusts the installation directory as to allow both Visual COBOL Server and DevHub Server to operate on the same host.
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Available variables are listed below, along with default values ```(see defaults/main.yml)```:
+
+```
+service_user: "service-user"
+service_group: "service-group"
+service_homedir: "/data/user"
+ssh_key_type: "ed25519"
+software_url: "http://www.example.org"
+package_name: "setup_cobol_server"
+install_dir: "/opt/microfocus/VisualCOBOL-DevHub/"
+```
+
+```service_user``` **(Required)** The username to use for the Service Account.
+
+```service_group``` **(Required)** The group name to use for the Service Account.
+
+```service_homedir``` **(Required)** The path to the homedir for the Service Account user.
+
+```ssh_key_type``` **(Required)** The SSH key type to use when creating the Service Account.
+
+```software_url``` **(Required)** The URL that hosts the Installer package. This should be either **http** or **https**.
+
+```package_name``` **(Required)** The Installer package name.
+
+```install_dir``` **(Required)** The alternate directory where to install the package. (Allowing both Visual COBOL Server and DevHub Server to exist on the same host.)
+
+Role variables can be stored with the hosts.yaml file, or in the main variables file.
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+Oracle-JDK is required for the software package. (OpenJDK not offically supported, but seems to work for my testing.)
 
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
     - hosts: servers
       roles:
-         - { role: username.rolename, x: 42 }
+         - role: mikepruett3.microfocus-devhub
+           vars:
+             service_user: "service-user"
+             service_group: "service-group"
+             service_homedir: "/data/user"
+             ssh_key_type: "ed25519"
+             software_url: "http://www.example.org"
+             package_name: "setup_cobol_server"
+             install_dir: "/opt/microfocus/VisualCOBOL-DevHub/"
 
 License
 -------
 
-BSD
+MIT
 
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+Role created by [mikepruett3](https://github.com/mikepruett3) on [Github.com](https://github.com/mikepruett3)
